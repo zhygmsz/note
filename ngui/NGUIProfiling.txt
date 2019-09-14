@@ -24,7 +24,8 @@ UIRect
 			#mGo:GameObject,
 			#mTrans:Transform,
 			#mChildren:BetterList<UIRect>,
-			#mChanged:bool = true,主要在UIWidget.UpdateGeometry方法里做判定依据,UIRect派生类按需更新,有UIBasicSprite(fillDirection,fillAmount,invert),UISprite(spriteName),UILabel(ProcessText),UIWidget(UpdateVisibility),
+			#mChanged:bool = true,主要在UIWidget.UpdateGeometry方法里做判定依据,UIRect派生类按需更新,
+									有UIBasicSprite(fillDirection,fillAmount,invert),UISprite(spriteName),UILabel(ProcessText),UIWidget(UpdateVisibility),
 			#mParentFound:bool = false,
 			-mUpdateAnchors:bool = true,
 			-mUpdateFrame:int = -1,
@@ -86,13 +87,15 @@ UIWidget
 			-mIsVisibleByAlpha:bool = true,按alpha来看该UIWidget是否可见,大于0.001即为可见,UIWidget.UpdateVisibility方法里对该字段更新,在UIWidget.UpdateGeometry方法里使用,
 			-mIsVisibleByPanel:bool = true,按UIPanel来看该UIWidget是否可见,被完全裁剪了不可见,由UIWidget.UpdateVisibility方法对该字段更新,和mIsVisibleByAlpha一起贡献isVisible部分因子,
 	实例属性：
-			+isVisible,get,UIWidget对外的总可见性,由UICamera.Raycast使用,UIPanel的FindDrawCall,FillDrawCall,FillAllDrawCalls三个方法使用,由mIsVisibleByAlpha,mIsVisibleByPanel,mIsInFront,UIRect.finalAlpha,NGUITools.GetActive(this)这几部分共同组成,
+			+isVisible,get,UIWidget对外的总可见性,由UICamera.Raycast使用,UIPanel的FindDrawCall,FillDrawCall,FillAllDrawCalls三个方法使用,
+							由mIsVisibleByAlpha,mIsVisibleByPanel,mIsInFront,UIRect.finalAlpha,NGUITools.GetActive(this)这几部分共同组成,
 	实例方法：
 			+UpdateVisibility(bool visibleByAlpha, bool visibleByPanel),更新(存在一个不同)UIWidget的mIsVisibleByAlpha和mIsVisibleByPanel,并置UIRect.mChanged为true,
 	静态字段：
 	静态方法：
 			+int PanelCompareFunc(UIWidget left, UIWidget right),UIPanel内的所有UIWidget排序方法,按照UIWidget.mDepth从小到大的顺序,如果UIWidget.mDepth相同,则有材质的在前,无材质的在后,在UIPanel内使用
-			+int FullCompareFunc(UIWidget left, UIWidget right),完全考虑所有排序因素,先是判断两个UIWidget所属的UIPanel的depth,按照从小到大,如果处于同一个UIPanel则使用PanelCompareFunc方法,在NGUITools和NGUIEditorTools里各有一处使用
+			+int FullCompareFunc(UIWidget left, UIWidget right),完全考虑所有排序因素,先是判断两个UIWidget所属的UIPanel的depth,按照从小到大,
+																如果处于同一个UIPanel则使用PanelCompareFunc方法,在NGUITools和NGUIEditorTools里各有一处使用
 	疑问：
 		UIRect.finalAlpha为什么和UIWidget.mIsVisibleByAlpha共存,两者有各自不同的需求么?
 UIBasicSprite
@@ -145,7 +148,8 @@ UIDrawCall
 	实例方法：
 	静态字段：
 	静态方法：
-			+Destroy(UIDrawCall dc),如果有onCreateDrawCall则直接UnityEngine.Object.Destroy()并返回,看起来像是dc由外部委托在维护;否则如果在运行从mActiveList移除,添加到mInactiveList,隐藏dc.gameObject,并置dc.mIsNew为true;如果是编辑器模式则直接UnityEngine.Object.DestroyImmediate
+			+Destroy(UIDrawCall dc),如果有onCreateDrawCall则直接UnityEngine.Object.Destroy()并返回,看起来像是dc由外部委托在维护;
+									否则如果在运行从mActiveList移除,添加到mInactiveList,隐藏dc.gameObject,并置dc.mIsNew为true;如果是编辑器模式则直接UnityEngine.Object.DestroyImmediate
 	
 UIPanel
 	委托：
@@ -154,7 +158,8 @@ UIPanel
 	介绍：
 	实例字段：
 			+widgets:List<UIWidget>,该UIPanel所管辖的所有UIWidget,有AddWidget和RemoveWidget两个方法负责更新,外部代码不允许更新,
-			+drawCalls:List<UIDrawCall>,由该UIPanel创建的所有UIDrawCall,,外部代码不允许更新,
+			+drawCalls:List<UIDrawCall>,由该UIPanel创建的所有UIDrawCall,FillDrawCall和FillAllDrawCalls两个方法构建,SetDirty和alpha遍历isDirty置为true,OnDisable全删除UIDrawCall并清空,
+										UpdateSelf里有删除操作,UpdateDrawCalls里做变换,LateUpdate和FindDrawCall里使用,外部代码不允许更新,
 			-mRebuild:bool = false,是否重建该UIPanel下的所有DC,除强制性方法Refresh外,仅在AddWidget和RemoveWidget两个方法里可能触发
 			-mSortWidgets:bool = false,是否需要对UIPanel所属的UIWidget们重排序,但目前没地方置为true,在公开方法SortWidgets方法里重排了widgets,并置为了false,
 			+onCreateMaterial:OnCreateMaterial,为单个widget自定义材质,为了拥有独一的dc,目前没用到,
@@ -162,10 +167,21 @@ UIPanel
 	实例属性：
 			+override alpha,修改后遍历drawCalls并将UIDrawCall.isDirty置为true,
 	实例方法：
+			+SetDirty(),
+			#override OnDisable(),遍历drawCalls并删除每个UIDrawCall,清空drawCalls,
+			-LateUpdate(),
+			-UpdateSelf(),
 			+SortWidgets(),对UIPanel内所辖的UIWidget按照UIWidget.PanelCompareFunc比较规则排序,并重置mSortWidgets为false,在编辑器非运行模式下,修改了UIWidget.depth会触发该方法,
-			#
+			-FillAllDrawCalls(),
+			+FillDrawCall(UIDrawCall dc),
+			-UpdateDrawCalls(int sortOrder),
+			-UpdateWidgets(),
+			+UIDrawCall FindDrawCall(UIWidget w),
 	静态字段：
 	静态方法：
-	最佳实践：
+	疑问：
+		对一个挂有UIPanel的GameObject设置SetActive(false),会触发UIPanel.OnDisable么?OnDisable方法触发时机?
 			
 	
+最佳实践：
+		尽量不修改UIPanel.alpha
