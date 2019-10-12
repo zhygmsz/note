@@ -6,7 +6,7 @@ UIPanel的裁剪,UIScrollView的滑动,
 UIRoot屏幕适配,
 NGUI事件判定流程,UICamera
 
-UIRect
+UIRect ： MonoBehaviour
 	介绍：抽象类,继承自MonoBehaviour,是NGUI框架的根基类
 	枚举：
 		+AnchorUpdate:
@@ -81,7 +81,7 @@ UIRect
 		静态字段：
 		静态方法：
 
-UIWidget
+UIWidget : UIRect
 	介绍：
 	实例字段：
 			-mIsVisibleByAlpha:bool = true,按alpha来看该UIWidget是否可见,大于0.001即为可见,UIWidget.UpdateVisibility方法里对该字段更新,在UIWidget.UpdateGeometry方法里使用,
@@ -98,22 +98,14 @@ UIWidget
 																如果处于同一个UIPanel则使用PanelCompareFunc方法,在NGUITools和NGUIEditorTools里各有一处使用
 	疑问：
 		UIRect.finalAlpha为什么和UIWidget.mIsVisibleByAlpha共存,两者有各自不同的需求么?
-UIBasicSprite
+UIBasicSprite : UIWidget
 	介绍：
 	实例字段：
 	实例属性：
 	实例方法：
 	静态字段：
 	静态方法：
-UISprite
-	介绍：
-	实例字段：
-	实例属性：
-	实例方法：
-	静态字段：
-	静态方法：
-	
-UITexture
+UISprite : UIBasicSprite
 	介绍：
 	实例字段：
 	实例属性：
@@ -121,7 +113,15 @@ UITexture
 	静态字段：
 	静态方法：
 	
-UILabel
+UITexture : UIBasicSprite
+	介绍：
+	实例字段：
+	实例属性：
+	实例方法：
+	静态字段：
+	静态方法：
+	
+UILabel : UIWidget
 	介绍：
 	实例字段：
 	实例属性：
@@ -137,7 +137,7 @@ UIGeometry
 	静态字段：
 	静态方法：
 	
-UIDrawCall
+UIDrawCall : MonoBehaviour
 	介绍：
 	委托：
 		+void OnCreateDrawCall(UIDrawCall dc, MeshFilter filter, MeshRenderer ren),
@@ -151,7 +151,7 @@ UIDrawCall
 			+Destroy(UIDrawCall dc),如果有onCreateDrawCall则直接UnityEngine.Object.Destroy()并返回,看起来像是dc由外部委托在维护;
 									否则如果在运行从mActiveList移除,添加到mInactiveList,隐藏dc.gameObject,并置dc.mIsNew为true;如果是编辑器模式则直接UnityEngine.Object.DestroyImmediate
 	
-UIPanel
+UIPanel : UIRect
 	委托：
 		+Material OnCreateMaterial(UIWidget widget, Material mat),
 		
