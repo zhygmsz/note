@@ -24,7 +24,7 @@ UIRect ： MonoBehaviour
 			#mGo:GameObject,
 			#mTrans:Transform,
 			#mChildren:BetterList<UIRect>,
-			#mChanged:bool = true,主要在UIWidget.UpdateGeometry方法里做判定依据,UIRect派生类按需更新,
+			#mChanged:bool = true,主要在UIWidget.UpdateGeometry方法里做判定依据,UIRect派生类里触发该字段为true的情况如下,
 									有UIBasicSprite(fillDirection,fillAmount,invert),UISprite(spriteName),UILabel(ProcessText),UIWidget(UpdateVisibility),
 			#mParentFound:bool = false,
 			-mUpdateAnchors:bool = true,
@@ -36,7 +36,7 @@ UIRect ： MonoBehaviour
 			#mCam:Camera
 			
 			#mStarted:bool = false,
-			+finalAlpha:float = 1f,充当渲染数据最终的alpha,由UICamera.Raycast使用,由UIWidget.UpdateFinalAlpha方法更新,
+			+finalAlpha:float = 1f,充当渲染数据最终的alpha,由UICamera.Raycast使用,由UIWidget.UpdateFinalAlpha和UIPanel.CalculateFinalAlpha两个方法更新,
 			
 	实例属性：
 			+cachedGameObject:GameObject,get
@@ -49,13 +49,14 @@ UIRect ： MonoBehaviour
 			+parent:UIRect,get
 			+root:UIRoot,get
 			+isAnchored:bool,get
-			abstract +alpha:float,get set,local alpha
+			abstract +alpha:float,get set,local alpha,UIWidget的派生类对alpha有不同的计算方式以及使用方式
 			abstract +Vector3[] localCorners,get
 			abstract +Vector3[] worldCorners,get
 			#cameraRayDistance:float,
 	实例方法：
-			abstract +float CalculateFinalAlpha(int frameID),
-			virtual +Invalidate(bool includeChildren),
+			abstract +float CalculateFinalAlpha(int frameID),UIWidget和UIPanel两个直接派生类重写了该方法,用于计算UIRect.finalAlpha（递归形式考虑父节点）
+			virtual +Invalidate(bool includeChildren),使该UIRect无效,将UIRect.mChanged置为true,并判断是否需要遍历子节点,如alpha改动则includeChildren为true,颜色变化则为false,
+													UIRect派生类覆写该方法并添加逻辑
 	静态字段：
 			#mSides:Vector3[],避免GC的临时变量
 	静态方法：
@@ -86,11 +87,15 @@ UIWidget : UIRect
 	实例字段：
 			-mIsVisibleByAlpha:bool = true,按alpha来看该UIWidget是否可见,大于0.001即为可见,UIWidget.UpdateVisibility方法里对该字段更新,在UIWidget.UpdateGeometry方法里使用,
 			-mIsVisibleByPanel:bool = true,按UIPanel来看该UIWidget是否可见,被完全裁剪了不可见,由UIWidget.UpdateVisibility方法对该字段更新,和mIsVisibleByAlpha一起贡献isVisible部分因子,
+			-mLastAlpha:float = 0f,在UIWidget.UpdateGeometry方法里使用,承接UIWidget.CalculateFinalAlpha(frame)返回值,并用来判断当前frame的finalAlpha和上一次的finalAlpha相比是否有改变
 	实例属性：
 			+isVisible,get,UIWidget对外的总可见性,由UICamera.Raycast使用,UIPanel的FindDrawCall,FillDrawCall,FillAllDrawCalls三个方法使用,
 							由mIsVisibleByAlpha,mIsVisibleByPanel,mIsInFront,UIRect.finalAlpha,NGUITools.GetActive(this)这几部分共同组成,
 	实例方法：
+			+float CalculateFinalAlpha(int frameID),内部调用了UpdateFinalAlpha(int frameID)方法,计算出UIRect.finalAlpha,并返回
+			#UpdateFinalAlpha(int frameID),以递归形式考虑父节点的UIRect.finalAlpha,并乘以UIWidget的UIWidget.mColor.a,相乘结果存到UIWidget的UIRect.finalAlpha里,供后续逻辑使用
 			+UpdateVisibility(bool visibleByAlpha, bool visibleByPanel),更新(存在一个不同)UIWidget的mIsVisibleByAlpha和mIsVisibleByPanel,并置UIRect.mChanged为true,
+			+UPdateGeometry(int frame),更新UIWidget,选择性填充UIWidget.geometry,并返回是否有更新,UIPanel.UpdateWidgets方法里调用
 	静态字段：
 	静态方法：
 			+int PanelCompareFunc(UIWidget left, UIWidget right),UIPanel内的所有UIWidget排序方法,按照UIWidget.mDepth从小到大的顺序,如果UIWidget.mDepth相同,则有材质的在前,无材质的在后,在UIPanel内使用
@@ -165,9 +170,10 @@ UIPanel : UIRect
 			+onCreateMaterial:OnCreateMaterial,为单个widget自定义材质,为了拥有独一的dc,目前没用到,
 			+onCreateDrawCall:UIDrawCall.OnCreateDrawCall,对接UIDrawCall.onCreateDrawCall,并对外提供服务,目前没地方用
 	实例属性：
-			+override alpha,修改后遍历drawCalls并将UIDrawCall.isDirty置为true,
+			+override alpha,修改后遍历drawCalls并将UIDrawCall.isDirty置为true
 	实例方法：
-			+SetDirty(),
+			+float CalculateFinalAlpha(int frameID),以递归形式考虑父节点的UIRect.finalAlpha,并乘以UIPanel.mAlpha,作为UIPanel的UIRect.finalAlpha
+			+SetDirty(),遍历drawCalls并将isDirty置为true,调用Invalidate(true)
 			#override OnDisable(),遍历drawCalls并删除每个UIDrawCall,清空drawCalls,
 			-LateUpdate(),
 			-UpdateSelf(),
@@ -180,8 +186,16 @@ UIPanel : UIRect
 	静态字段：
 	静态方法：
 	疑问：
-		对一个挂有UIPanel的GameObject设置SetActive(false),会触发UIPanel.OnDisable么?OnDisable方法触发时机?
+		
 			
 	
 最佳实践：
 		尽量不修改UIPanel.alpha
+
+		
+总结
+mesh数据更新
+mesh数据有哪些
+	颜色(包括alpha),顶点位置(UIRect的pos和size),顶点数量,uv
+上层触发更新的条件？
+更新后如何缓存？
