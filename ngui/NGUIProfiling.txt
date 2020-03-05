@@ -2,8 +2,8 @@
 UIPanel,UIWidget,UIDrawCall,UIGeometry这四个类之间的关系,UIPanel内的UIWidget排序触发时机,DC构建细节,DC更新细节
 UIRect,UIWidget,UIBasicSprite,UISprite,UITexture,UILabel,渲染数据构建细节,和各个UIRect派生类有关,构建时如何复用内存,如何减少GC,如何减少更新次数,和DC关系
 锚点和变换矩阵(位置更新),更新时机,
-UIPanel的裁剪,UIScrollView的滑动,
 UIRoot屏幕适配,
+UIPanel的裁剪,UIScrollView的滑动,
 NGUI事件判定流程,UICamera
 
 UIRect ： MonoBehaviour
